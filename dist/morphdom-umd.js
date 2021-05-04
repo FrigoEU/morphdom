@@ -542,7 +542,7 @@
                     curToNodeKey = getNodeKey(curToNodeChild);
 
                     // walk the fromNode children all the way through
-                    while (curFromNodeChild && curFromNodechild !== endingFromNodeChild) {
+                    while (curFromNodeChild && curFromNodeChild !== endingFromNodeChild) {
                         fromNextSibling = curFromNodeChild.nextSibling;
 
                         if (curToNodeChild.isSameNode && curToNodeChild.isSameNode(curFromNodeChild)) {
