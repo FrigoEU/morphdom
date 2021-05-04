@@ -8,6 +8,8 @@ interface MorphDomOptions {
     onNodeDiscarded?: (node: Node) => void;
     onBeforeElChildrenUpdated?: (fromEl: HTMLElement, toEl: HTMLElement) => boolean;
     childrenOnly?: boolean;
+    skipChildren?: number;
+    skipChildrenEnd?: number;
 }
 
 declare function morphdom(
