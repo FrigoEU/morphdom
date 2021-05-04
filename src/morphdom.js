@@ -253,7 +253,7 @@ export default function morphdomFactory(morphAttrs) {
                 curToNodeKey = getNodeKey(curToNodeChild);
 
                 // walk the fromNode children all the way through
-                while (curFromNodeChild && churFromNodechild !== endingFromNodeChild) {
+                while (curFromNodeChild && curFromNodechild !== endingFromNodeChild) {
                     fromNextSibling = curFromNodeChild.nextSibling;
 
                     if (curToNodeChild.isSameNode && curToNodeChild.isSameNode(curFromNodeChild)) {
