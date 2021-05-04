@@ -266,6 +266,8 @@ function morphdomFactory(morphAttrs) {
         var onNodeDiscarded = options.onNodeDiscarded || noop;
         var onBeforeElChildrenUpdated = options.onBeforeElChildrenUpdated || noop;
         var childrenOnly = options.childrenOnly === true;
+        var skipChildren = options.skipChildren || 0;
+        var skipChildrenEnd = options.skipChildrenEnd || 0;
 
         // This object is used as a lookup to quickly find all keyed elements in the original DOM tree.
         var fromNodesLookup = Object.create(null);
@@ -350,10 +352,14 @@ function morphdomFactory(morphAttrs) {
         //     }
         // }
 
-        function indexTree(node) {
+        function indexTree(node, skipChildrenI, skipChildrenEndI) {
+            var skipChildren = skipChildrenI || 0;
+            var skipChildrenEnd = skipChildrenEndI || 0;
+
             if (node.nodeType === ELEMENT_NODE || node.nodeType === DOCUMENT_FRAGMENT_NODE) {
-                var curChild = node.firstChild;
-                while (curChild) {
+                var curChild = node.childNodes[skipChildren];
+                var endingChild = node.childNodes[node.childNodes.length - skipChildrenEnd];
+                while (curChild && curChild !== endingChild) {
                     var key = getNodeKey(curChild);
                     if (key) {
                         fromNodesLookup[key] = curChild;
@@ -367,7 +373,7 @@ function morphdomFactory(morphAttrs) {
             }
         }
 
-        indexTree(fromNode);
+        indexTree(fromNode, skipChildren, skipChildrenEnd);
 
         function handleNodeAdded(el) {
             onNodeAdded(el);
@@ -397,11 +403,11 @@ function morphdomFactory(morphAttrs) {
             }
         }
 
-        function cleanupFromEl(fromEl, curFromNodeChild, curFromNodeKey) {
+        function cleanupFromEl(fromEl, curFromNodeChild, curFromNodeKey, endingFromNodeChild) {
             // We have processed all of the "to nodes". If curFromNodeChild is
             // non-null then we still have some from nodes left over that need
             // to be removed
-            while (curFromNodeChild) {
+            while (curFromNodeChild && curFromNodeChild !== endingFromNodeChild) {
                 var fromNextSibling = curFromNodeChild.nextSibling;
                 if ((curFromNodeKey = getNodeKey(curFromNodeChild))) {
                     // Since the node is keyed it might be matched up later so we defer
@@ -416,7 +422,7 @@ function morphdomFactory(morphAttrs) {
             }
         }
 
-        function morphEl(fromEl, toEl, childrenOnly) {
+        function morphEl(fromEl, toEl, childrenOnly, skipChildren, skipChildrenEnd) {
             var toElKey = getNodeKey(toEl);
 
             if (toElKey) {
@@ -442,15 +448,19 @@ function morphdomFactory(morphAttrs) {
             }
 
             if (fromEl.nodeName !== 'TEXTAREA') {
-              morphChildren(fromEl, toEl);
+              morphChildren(fromEl, toEl, skipChildren, skipChildrenEnd);
             } else {
               specialElHandlers.TEXTAREA(fromEl, toEl);
             }
         }
 
-        function morphChildren(fromEl, toEl) {
+        function morphChildren(fromEl, toEl, skipChildrenI, skipChildrenEndI) {
+            var skipChildren = skipChildrenI || 0;
+            var skipChildrenEnd = skipChildrenEndI || 0;
+            var endingFromNodeChild = fromEl.childNodes[fromEl.childNodes.length - skipChildrenEnd];
+
             var curToNodeChild = toEl.firstChild;
-            var curFromNodeChild = fromEl.firstChild;
+            var curFromNodeChild = fromEl.childNodes[skipChildren];
             var curToNodeKey;
             var curFromNodeKey;
 
@@ -464,7 +474,7 @@ function morphdomFactory(morphAttrs) {
                 curToNodeKey = getNodeKey(curToNodeChild);
 
                 // walk the fromNode children all the way through
-                while (curFromNodeChild) {
+                while (curFromNodeChild && churFromNodechild !== endingFromNodeChild) {
                     fromNextSibling = curFromNodeChild.nextSibling;
 
                     if (curToNodeChild.isSameNode && curToNodeChild.isSameNode(curFromNodeChild)) {
@@ -587,7 +597,11 @@ function morphdomFactory(morphAttrs) {
                 // nodes. Therefore, we will just append the current "to" node
                 // to the end
                 if (curToNodeKey && (matchingFromEl = fromNodesLookup[curToNodeKey]) && compareNodeNames(matchingFromEl, curToNodeChild)) {
-                    fromEl.appendChild(matchingFromEl);
+                    if (skipChildrenEnd && endingFromNodeChild){
+                      fromEl.insertBefore(matchingFromEl, endingFromNodeChild);
+                    } else {
+                      fromEl.appendChild(matchingFromEl);
+                    }
                     // MORPH
                     morphEl(matchingFromEl, curToNodeChild);
                 } else {
@@ -600,7 +614,11 @@ function morphdomFactory(morphAttrs) {
                         if (curToNodeChild.actualize) {
                             curToNodeChild = curToNodeChild.actualize(fromEl.ownerDocument || doc);
                         }
-                        fromEl.appendChild(curToNodeChild);
+                        if (skipChildrenEnd && endingFromNodeChild){
+                          fromEl.insertBefore(curToNodeChild, endingFromNodeChild);
+                        } else {
+                          fromEl.appendChild(curToNodeChild);
+                        }
                         handleNodeAdded(curToNodeChild);
                     }
                 }
@@ -609,7 +627,7 @@ function morphdomFactory(morphAttrs) {
                 curFromNodeChild = fromNextSibling;
             }
 
-            cleanupFromEl(fromEl, curFromNodeChild, curFromNodeKey);
+            cleanupFromEl(fromEl, curFromNodeChild, curFromNodeKey, endingFromNodeChild);
 
             var specialElHandler = specialElHandlers[fromEl.nodeName];
             if (specialElHandler) {
@@ -657,7 +675,7 @@ function morphdomFactory(morphAttrs) {
                 return;
             }
 
-            morphEl(morphedNode, toNode, childrenOnly);
+            morphEl(morphedNode, toNode, childrenOnly, skipChildren, skipChildrenEnd);
 
             // We now need to loop over any keyed nodes that might need to be
             // removed. We only do the removal if we know that the keyed node

@@ -94,6 +94,8 @@ Supported options (all optional):
 - **onNodeDiscarded** (`Function(node)`) - Called after a `Node` in the `from` tree has been discarded.
 - **onBeforeElChildrenUpdated** (`Function(fromEl, toEl)`) - Called before the children of a `HTMLElement` in the `from` tree are updated. If this function returns `false` then the child nodes will not be updated.
 - **childrenOnly** (`Boolean`) - If `true` then only the children of the `fromNode` and `toNode` nodes will be morphed (the containing element will be skipped). Defaults to `false`.
+- **skipChildren** (`number`) - Skip the first x children of the parent element
+- **skipChildrenEnd** (`number`) - Skip the last x children of the parent element
 
 ```javascript
 var morphdom = require('morphdom');
@@ -122,7 +124,9 @@ var morphedNode = morphdom(fromNode, toNode, {
     onBeforeElChildrenUpdated: function(fromEl, toEl) {
         return true;
     },
-    childrenOnly: false
+    childrenOnly: false,
+    skipChildren: 0,
+    skipChildrenEnd: 0
 });
 ```
 
